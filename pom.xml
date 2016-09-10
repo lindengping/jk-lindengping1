@@ -4,19 +4,7 @@
   <artifactId>lindengping1</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <dependencies>
-	  <!-- https://mvnrepository.com/artifact/de.idyl/winzipaes -->
-	<!-- <dependency>
-	    <groupId>de.idyl</groupId>
-	    <artifactId>winzipaes</artifactId>
-	    <version>1.0.1</version>
-	</dependency> -->
-	<!-- https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk16 -->
-	<!-- <dependency>
-	    <groupId>org.bouncycastle</groupId>
-	    <artifactId>bcprov-jdk16</artifactId>
-	    <version>1.45</version>
-	</dependency> -->
-	<!-- https://mvnrepository.com/artifact/net.lingala.zip4j/zip4j -->
+
 	<dependency>
 	    <groupId>net.lingala.zip4j</groupId>
 	    <artifactId>zip4j</artifactId>
@@ -35,12 +23,12 @@
           <source>1.7</source>
           <target>1.7</target>
           <archive>
-			 <manifest>
-			  <addClasspath>true</addClasspath>
-			</manifest>
-			<mainClass>
-              com.yihe.jk.main.TopK
-             </mainClass>
+			<manifest>
+              <addClasspath>true</addClasspath>
+              <mainClass>com.yihe.jk.main.TopK</mainClass>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+              <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+            </manifest>
 		</archive>
         </configuration>
       </plugin>
