@@ -33,6 +33,7 @@ public class TopK {
 		Scanner sc = new Scanner(System.in);
 		System.out.print("please input password:");
 		String psw = sc.next();
+		sc.close();
 		long startTime = System.currentTimeMillis();
 
 		try {

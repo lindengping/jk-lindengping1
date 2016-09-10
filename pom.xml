@@ -13,6 +13,10 @@
 	
   
   </dependencies>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.build.timestamp.format>yyyy-MM-dd_HH_mm</maven.build.timestamp.format>
+  </properties>
   <build>
     <sourceDirectory>src</sourceDirectory>
     <plugins>
