@@ -7,14 +7,10 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.FileAttribute;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -23,7 +19,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,7 +26,8 @@ import java.util.concurrent.Executors;
 import net.lingala.zip4j.core.ZipFile;
 
 public class TopK {
-	private static final String root = "f://jk//TopK_TEMP//";
+	private static final String BASE_PATH = /*"f:"+File.separator+"jk"+*/File.separator;
+	private static final String TEMP_PATH = BASE_PATH+"TopK_TEMP"+File.separator;
 
 	public static void main(String[] args) {
 		Scanner sc = new Scanner(System.in);
@@ -41,15 +37,16 @@ public class TopK {
 
 		try {
 			System.out.println("1.开始解压……");
-			ZipFile zipFile = new ZipFile("f://jk//test.zip");
-
+			ZipFile zipFile = new ZipFile(BASE_PATH+"test.zip");
+			String filename = BASE_PATH+"test.txt";
+			
 			if (zipFile.isEncrypted()) {
 				zipFile.setPassword(psw);
 			}
-			zipFile.extractAll("f://jk");
+			zipFile.extractAll(BASE_PATH);
 			System.out.println("解压完成!");
 			System.out.println("2.开始分析……");
-			String filename = "f://jk//test.txt";
+			
 			TopK topk = new TopK(filename);
 			topk.preProcess();
 			System.out.println(" 2.1 分解文件完成!");
@@ -80,7 +77,6 @@ public class TopK {
 		this.filename = filename;
 	}
 
-//	private final static int bufSize = FILE_CACHE * 1024 * 1024;
 
 	/**
 	 * 将大文件拆分成较小的文件，进行预处理
@@ -88,19 +84,14 @@ public class TopK {
 	 * @throws IOException
 	 */
 	private void preProcess() throws IOException {
-		File file = new File(root);
+		File file = new File(TEMP_PATH);
 		deleteDir(file);
 		if (!file.exists())
 			file.mkdirs();
 		File dataFile = new File(filename);
-//		FileChannel fcin = new RandomAccessFile(dataFile, "r").getChannel();
-		// RandomAccessFile raFile = new RandomAccessFile(dataFile, "r");
-		int size = 0;
-		// MappedByteBuffer out = fcin.map(FileChannel.MapMode.READ_ONLY, 0,
-		// bufSize);
-//		String line= "";
 
-//		ByteBuffer rBuffer = ByteBuffer.allocate(bufSize);
+		int size = 0;
+
 		BufferedInputStream fis = new BufferedInputStream(new FileInputStream(
 				dataFile));
 		// 用5M的缓冲读取文本文件
@@ -113,28 +104,25 @@ public class TopK {
 			++i;
 			
 			PreThread preThread = new PreThread(i+"",rBuffer.toString());
-//			rBuffer.clear();
-//			Thread t = new Thread(preThread); 
-//			 t.start();
+
 			threadPool.execute(preThread);
 	       
 		}
 		threadPool.shutdown();
+		//线程池执行完才执行下一步
 		while (true) {  
             if (threadPool.isTerminated()) {  
                 break;
             }  
         }  
 
-//		rBuffer.clear();
 		reader.close();
 		fis.close();
-//		fcin.close();
 
 	}
 
 	private boolean process() throws IOException {
-		Path target = Paths.get(root);
+		Path target = Paths.get(TEMP_PATH);
 
 		HashMap<Long, String> wordFreqMap = new HashMap<Long, String>();
 		List<Long> wordFreqList = new ArrayList<Long>();
@@ -149,7 +137,7 @@ public class TopK {
 				word = word.replace(SUFFIX_WORD, "");
 				word = word.replace(FILE_PRE, "");
 			}
-			System.out.println(i + ":" + word+"="+freq);
+			System.out.println(i + ":" + word/*+"="+freq*/);
 		}
 
 		return true;
@@ -203,40 +191,7 @@ public class TopK {
 		}
 	}
 
-	/**
-	 * 创建文件
-	 * 
-	 * @throws IOException
-	 */
-	public static void createFile(String splitFilename) throws IOException {
-		Path target = Paths.get(splitFilename);
-		Set<PosixFilePermission> perms = PosixFilePermissions
-				.fromString("rw-rw-rw-");
-		FileAttribute<Set<PosixFilePermission>> attr = PosixFilePermissions
-				.asFileAttribute(perms);
-		Files.createFile(target, attr);
-	}
 
-	/**
-	 * 文件内容追加
-	 * 
-	 * @param splitFilename
-	 * @param bytes
-	 * @return
-	 * @throws IOException
-	 */
-	public static Path appendToFile(String splitFilename, byte[] bytes)
-			throws IOException {
-		if (bytes != null) {
-			Path target = Paths.get(splitFilename);
-			if (target == null) {
-				createFile(splitFilename);
-			}
-			return Files.write(target, bytes);// , options)
-		}
-
-		return null;
-	}
 
 	/**
 	 * 递归删除目录下的所有文件及子目录下所有文件
@@ -262,36 +217,25 @@ public class TopK {
 	}
 
 	class PreThread implements Runnable {
-//		private ByteBuffer rBuffer;
 		private String  data;
 		private String threadNo;
-//		Map<String, String> wordFreqMap;
-//		Map<String, FileWriter> fwMap;
+
 		Map<String, String> wordFreqMap = new HashMap<String, String>();
 		// filewriter缓存
 		Map<String, FileWriter> fwMap = new HashMap<String, FileWriter>();
 
-		public PreThread(String threadNo,String data/*ByteBuffer rBuffer*//*, Map<String, String> wordFreqMap,
-				Map<String, FileWriter> fwMap*/) {
-//			this.rBuffer = rBuffer;
+		public PreThread(String threadNo,String data) {
 			this.data = data;
 			this.threadNo = threadNo;
-//			this.wordFreqMap = wordFreqMap;
-//			this.fwMap = fwMap;
 		}
 
 		@Override
 		public void run() {
 			System.out.println("线程["+threadNo+"]启动……");
-//			System.out.println(data);
-			
-//			System.out.println("length:"+data.length()+";hashcode:"+data.hashCode());
+
 			try {
-				/*FileWriter ftemp = new FileWriter("f://jk//temp//"+System.currentTimeMillis()+".txt");
-				ftemp.write(data);
-				ftemp.close();*/
+
 				 StringTokenizer token=new StringTokenizer(data/*new String(rBuffer.array(),"utf-8")*/,DELIMITER);   
-//				String split[] = new String(rBuffer.array(),"utf-8").split(delimiter);
 				 data = null;
 				while ( token.hasMoreElements() ){
 					String word = token.nextToken();
@@ -301,18 +245,10 @@ public class TopK {
 						wordFreqMap.put(word, REPLACE_CHAR);
 					}
 				}
-				/*for (String word : split) {
-					if (wordFreqMap.containsKey(word)) {
-						wordFreqMap.put(word, wordFreqMap.get(word) + REPLACE_CHAR);
-					} else {
-						wordFreqMap.put(word, REPLACE_CHAR);
-					}
-				}*/
-//				split = null;
+
 				for (String word : wordFreqMap.keySet()) {
 					
-					String filePath = root + FILE_PRE + word + SUFFIX_WORD;
-//					appendToFile(filePath,wordFreqMap.get(word).getBytes());
+					String filePath = TEMP_PATH + FILE_PRE + word + SUFFIX_WORD;
 					File file = new File(filePath);
 					if (!file.exists())
 						file.createNewFile();
@@ -325,10 +261,7 @@ public class TopK {
 						fw = new FileWriter(file,true);
 						fwMap.put(filePath, fw);
 					}
-					/*for (char c:wordFreqMap.get(word).toCharArray()){
-						fw.append(c);
-					}*/
-					
+
 					fw.append(wordFreqMap.get(word));
 					
 				}

@@ -35,12 +35,12 @@
           <source>1.7</source>
           <target>1.7</target>
           <archive>
-			 <manifestFile>
-			 	src/META-INF/MANIFEST.MF
-			 </manifestFile>
 			 <manifest>
 			  <addClasspath>true</addClasspath>
 			</manifest>
+			<mainClass>
+              com.yihe.jk.main.TopK
+             </mainClass>
 		</archive>
         </configuration>
       </plugin>
