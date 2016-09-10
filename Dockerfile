@@ -1,4 +1,4 @@
-FROM java:7
+FROM tomcat:7-jre7
 
 MAINTAINER lindengping lindengping@yihecloud.com
 
