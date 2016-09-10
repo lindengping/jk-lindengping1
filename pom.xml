@@ -26,15 +26,13 @@
         <configuration>
           <source>1.7</source>
           <target>1.7</target>
-          <archive>
-			<manifest>
-              <addClasspath>true</addClasspath>
-              <mainClass>com.yihe.jk.main.TopK</mainClass>
-              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-              <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-            </manifest>
-		</archive>
+          <transformers>
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <mainClass>com.yihe.jk.main.TopK</mainClass>
+                            </transformer>
+                        </transformers>
         </configuration>
+        
       </plugin>
     </plugins>
   </build>
