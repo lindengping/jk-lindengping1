@@ -7,6 +7,8 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,33 +24,37 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.StringTokenizer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import net.lingala.zip4j.core.ZipFile;
 
 public class TopK {
-	private static final String root = "/TopK_TEMP";
+	private static final String root = "f://jk//TopK_TEMP//";
 
 	public static void main(String[] args) {
 		Scanner sc = new Scanner(System.in);
-		System.out.println("please input password:");
+		System.out.print("please input password:");
 		String psw = sc.next();
 		long startTime = System.currentTimeMillis();
-		
+
 		try {
 			System.out.println("1.开始解压……");
-			ZipFile zipFile = new ZipFile("/big.txt.zip");
+			ZipFile zipFile = new ZipFile("f://jk//test.zip");
 
 			if (zipFile.isEncrypted()) {
 				zipFile.setPassword(psw);
-            }
-	        zipFile.extractAll("/");
-	        System.out.println("解压完成!");
-	        System.out.println("2.开始分析……");
-			String filename = "/big.txt";
+			}
+			zipFile.extractAll("f://jk");
+			System.out.println("解压完成!");
+			System.out.println("2.开始分析……");
+			String filename = "f://jk//test.txt";
 			TopK topk = new TopK(filename);
 			topk.preProcess();
+			System.out.println(" 2.1 分解文件完成!");
 			topk.process();
-			System.out.println("分析完成!");
+			System.out.println(" 2.2 分析完成!");
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
@@ -56,15 +62,15 @@ public class TopK {
 					+ (System.currentTimeMillis() - startTime) / 1000f + " 秒 ");
 		}
 	}
-
+	private static final int THREAD_SIZE = 100;
 	private static final String SUFFIX_WORD = ".txt";
-	private static final String delimiter = ";";
+	private static final String DELIMITER = ";";
 	private static final String FILE_PRE = "word_";
 
 	private static final String REPLACE_CHAR = "?";
 
 	// 单位为M
-	private static final int FILE_CACHE = 1;
+	private static final int FILE_CACHE = 1* 1024 * 1024;
 
 	private String filename = "";
 	// 前几个频率最高
@@ -73,6 +79,8 @@ public class TopK {
 	public TopK(final String filename) {
 		this.filename = filename;
 	}
+
+//	private final static int bufSize = FILE_CACHE * 1024 * 1024;
 
 	/**
 	 * 将大文件拆分成较小的文件，进行预处理
@@ -84,63 +92,45 @@ public class TopK {
 		deleteDir(file);
 		if (!file.exists())
 			file.mkdirs();
-		// Path newfile = FileSystems.getDefault().getPath(filename);
+		File dataFile = new File(filename);
+//		FileChannel fcin = new RandomAccessFile(dataFile, "r").getChannel();
+		// RandomAccessFile raFile = new RandomAccessFile(dataFile, "r");
+		int size = 0;
+		// MappedByteBuffer out = fcin.map(FileChannel.MapMode.READ_ONLY, 0,
+		// bufSize);
+//		String line= "";
+
+//		ByteBuffer rBuffer = ByteBuffer.allocate(bufSize);
 		BufferedInputStream fis = new BufferedInputStream(new FileInputStream(
-				new File(filename)));
+				dataFile));
 		// 用5M的缓冲读取文本文件
 		BufferedReader reader = new BufferedReader(new InputStreamReader(fis,
-				"utf-8"), FILE_CACHE * 1024 * 1024);
-
-		// 假设文件是10G，那么先根据单词拆成小文件，再进行读写判断
-		// 如果不拆分文件，将单词当做key，访问时间当做value存到hashmap时，
-		// 当单词足够多的情况下，内存开销吃不消
-
-		String line = "";
-		// int count = 0;
-		Map<String, String> wordFreqMap = new HashMap<String, String>();
-		//filewriter缓存
-		Map<String, FileWriter> fwMap = new HashMap<String, FileWriter>();
-//		Map<String, File> fMap = new HashMap<String, File>();
-		while ((line = reader.readLine()) != null) {
-			String split[] = line.split(delimiter);
-			for (String word : split) {
-				if (wordFreqMap.containsKey(word)) {
-					wordFreqMap.put(word, wordFreqMap.get(word) + REPLACE_CHAR);
-				} else {
-					wordFreqMap.put(word, REPLACE_CHAR);
-				}
-			}
-			for (String word : wordFreqMap.keySet()) {
-				String filePath = root + FILE_PRE + word + SUFFIX_WORD;
-				File temp = new File(filePath);
-				if (!temp.exists())
-					temp.createNewFile();
-				FileWriter fw = null;
-				if (fwMap.containsKey(filePath)) {
-					fw = fwMap.get(filePath);
-				}
-				if (fw == null) {
-					fw = new FileWriter(temp);
-					fwMap.put(filePath, fw);
-				}
-
-				fw.write(wordFreqMap.get(word));
-
-				// int serial = word.hashCode();
-				// appendToFile(root + FILE_PRE + word + SUFFIX_WORD,
-				// wordFreqMap.get(word).getBytes());
-			}
-			wordFreqMap.clear();
-			Collection<FileWriter> c = fwMap.values();
-			for (FileWriter fw : c) {
-				if (fw != null)
-					fw.close();
-			}
-			fwMap.clear();
+				"utf-8"));
+		CharBuffer rBuffer = CharBuffer.allocate(FILE_CACHE); 
+		ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_SIZE); 
+		int i = 0;
+		while ((size = reader.read(rBuffer.array())) != -1) {
+			++i;
+			
+			PreThread preThread = new PreThread(i+"",rBuffer.toString());
+//			rBuffer.clear();
+//			Thread t = new Thread(preThread); 
+//			 t.start();
+			threadPool.execute(preThread);
+	       
 		}
-		
+		threadPool.shutdown();
+		while (true) {  
+            if (threadPool.isTerminated()) {  
+                break;
+            }  
+        }  
+
+//		rBuffer.clear();
 		reader.close();
 		fis.close();
+//		fcin.close();
+
 	}
 
 	private boolean process() throws IOException {
@@ -155,9 +145,11 @@ public class TopK {
 		for (Long freq : wordFreqList) {
 			++i;
 			String word = wordFreqMap.get(freq);
-			word = word.replace(SUFFIX_WORD, "");
-			word = word.replace(FILE_PRE, "");
-			System.out.println(i + ":" + word);
+			if (word!=null){
+				word = word.replace(SUFFIX_WORD, "");
+				word = word.replace(FILE_PRE, "");
+			}
+			System.out.println(i + ":" + word+"="+freq);
 		}
 
 		return true;
@@ -267,6 +259,97 @@ public class TopK {
 		}
 		// 目录此时为空，可以删除
 		return dir.delete();
+	}
+
+	class PreThread implements Runnable {
+//		private ByteBuffer rBuffer;
+		private String  data;
+		private String threadNo;
+//		Map<String, String> wordFreqMap;
+//		Map<String, FileWriter> fwMap;
+		Map<String, String> wordFreqMap = new HashMap<String, String>();
+		// filewriter缓存
+		Map<String, FileWriter> fwMap = new HashMap<String, FileWriter>();
+
+		public PreThread(String threadNo,String data/*ByteBuffer rBuffer*//*, Map<String, String> wordFreqMap,
+				Map<String, FileWriter> fwMap*/) {
+//			this.rBuffer = rBuffer;
+			this.data = data;
+			this.threadNo = threadNo;
+//			this.wordFreqMap = wordFreqMap;
+//			this.fwMap = fwMap;
+		}
+
+		@Override
+		public void run() {
+			System.out.println("线程["+threadNo+"]启动……");
+//			System.out.println(data);
+			
+//			System.out.println("length:"+data.length()+";hashcode:"+data.hashCode());
+			try {
+				/*FileWriter ftemp = new FileWriter("f://jk//temp//"+System.currentTimeMillis()+".txt");
+				ftemp.write(data);
+				ftemp.close();*/
+				 StringTokenizer token=new StringTokenizer(data/*new String(rBuffer.array(),"utf-8")*/,DELIMITER);   
+//				String split[] = new String(rBuffer.array(),"utf-8").split(delimiter);
+				 data = null;
+				while ( token.hasMoreElements() ){
+					String word = token.nextToken();
+					if (wordFreqMap.containsKey(word)) {
+						wordFreqMap.put(word, wordFreqMap.get(word) + REPLACE_CHAR);
+					} else {
+						wordFreqMap.put(word, REPLACE_CHAR);
+					}
+				}
+				/*for (String word : split) {
+					if (wordFreqMap.containsKey(word)) {
+						wordFreqMap.put(word, wordFreqMap.get(word) + REPLACE_CHAR);
+					} else {
+						wordFreqMap.put(word, REPLACE_CHAR);
+					}
+				}*/
+//				split = null;
+				for (String word : wordFreqMap.keySet()) {
+					
+					String filePath = root + FILE_PRE + word + SUFFIX_WORD;
+//					appendToFile(filePath,wordFreqMap.get(word).getBytes());
+					File file = new File(filePath);
+					if (!file.exists())
+						file.createNewFile();
+
+					FileWriter fw = null;
+					if (fwMap.containsKey(filePath)) {
+						fw = fwMap.get(filePath);
+					}
+					if (fw == null) {
+						fw = new FileWriter(file,true);
+						fwMap.put(filePath, fw);
+					}
+					/*for (char c:wordFreqMap.get(word).toCharArray()){
+						fw.append(c);
+					}*/
+					
+					fw.append(wordFreqMap.get(word));
+					
+				}
+				wordFreqMap.clear();
+				Collection<FileWriter> c = fwMap.values();
+				for (FileWriter fw : c) {
+					if (fw != null){
+						
+						fw.flush();
+						fw.close();
+					}
+						
+				}
+				fwMap.clear();
+				wordFreqMap = null;
+				fwMap = null;
+				System.out.println("线程["+threadNo+"]结束");
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 }

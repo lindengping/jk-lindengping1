@@ -36,7 +36,7 @@
           <target>1.7</target>
           <archive>
 			 <manifestFile>
-			 	META-INF/MANIFEST.MF
+			 	src/META-INF/MANIFEST.MF
 			 </manifestFile>
 			 <manifest>
 			  <addClasspath>true</addClasspath>
