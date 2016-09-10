@@ -26,13 +26,8 @@
         <configuration>
           <source>1.7</source>
           <target>1.7</target>
-          <transformers>
-                            <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                <mainClass>com.yihe.jk.main.TopK</mainClass>
-                            </transformer>
-                        </transformers>
-        </configuration>
-        
+           </configuration>
+          
       </plugin>
     </plugins>
   </build>
