@@ -26,8 +26,15 @@
         <configuration>
           <source>1.7</source>
           <target>1.7</target>
-           </configuration>
-          
+          <archive>
+			<manifest>
+              <addClasspath>true</addClasspath>
+              <mainClass>com.yihe.jk.main.TopK</mainClass>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+              <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+            </manifest>
+		</archive>
+        </configuration>
       </plugin>
     </plugins>
   </build>
